@@ -8,66 +8,93 @@
 import sys
 import numpy as np
 from dataset import SampleDataset
+import os
+import csv
 import torch
 from skimage import io
 from skimage.util import img_as_ubyte
-
+from dataset import SampleDataset, SampleDataSpliter
+from torch.utils.data import DataLoader
 
 # sample function for performing inference for a whole dataset
-def infer_all(net, batch_size, dataloader, device):
-    # do not calculate the gradients
-    with torch.no_grad():
-        for i in range(0, 3):
-            # generate a random image and save t to output_predictions
-            random_image = np.random.rand(50, 50, 3)
-            random_image_byte = img_as_ubyte(random_image)
-            filename = f"output_predictions/random_image_{i}.png"  # Adjust filename as needed
-            io.imsave(filename, random_image_byte)
-    return
+def infer_all(net, batch_size, dataloader, device, output_file):
+    net.to(device)
+    net.eval()
+
+    # Open a file to write the predictions
+    with open(output_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['filename', 'class_id'])
+
+        # Do not calculate the gradients
+        with torch.no_grad():
+            for i, (images, labels, image_files) in enumerate(dataloader):
+                images = images.to(device)
+                outputs = net(images)
+                _, predicted = torch.max(outputs.data, 1)
+                # Write each prediction to the CSV file
+                for idx, (pred, actual) in enumerate(zip(predicted.cpu().numpy(), labels.numpy())):
+                    writer.writerow([image_files[idx], pred])
 
 
 # declaration for this function should not be changed
 def inference(dataset_path, model_path, n_samples):
-    """
-    inference(dataset_path, model_path='model.pt') performs inference on the given dataset;
-    if n_samples is not passed or <= 0, the predictions are performed for all data samples at the dataset_path
-    if  n_samples=N, where N is an int positive number, then only N first predictions are performed
-    saves:
-    - predictions to 'output_predictions' folder
-
-    Parameters:
-    - dataset_path (string): path to a dataset
-    - model_path (string): path to a model
-    - n_samples (int): optional parameter, number of predictions to perform
-
-    Returns:
-    - None
-    """
     # Check for available GPU
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Computing with {}!'.format(device))
 
-    # loading the model
-    model_path = 'model.pt'  # an example of model_path parameter
+    # Load the model
     model = torch.load(model_path)
     model.eval()
 
     batch_size = 4
-    testdataset = SampleDataset()
-    testloader = None
 
-    # if n_samples <= 0 -> perform predictions all data samples at the dataset_path
+    # Initialize dataset and dataloader
+    cityscape_dataset = SampleDataset(data_dir=dataset_path)
+    sample_data_splitter = SampleDataSpliter(cityscape_dataset)
+    testdataset = sample_data_splitter.get_test_dataset()
+    testloader = DataLoader(testdataset, batch_size=batch_size, shuffle=False)
+
+    output_dir = './output_predictions/'
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, 'predictions.csv')
+
+    # Perform inference
     if n_samples <= 0:
-        infer_all(model, batch_size, testloader, device)
+        infer_all(model, batch_size, testloader, device, output_file)
     else:
-        # perform predictions only for the first n_samples images
-        for i in range(0, n_samples):
-            # generate a random image and save t to output_predictions
-            random_image = np.random.rand(50, 50, 3)
-            random_image_byte = img_as_ubyte(random_image)
-            filename = f"output_predictions/random_image_{i}.png"  # Adjust filename as needed
-            io.imsave(filename, random_image_byte)
-    return
+        limited_loader = DataLoader(testdataset, batch_size=1, shuffle=False)
+        with open(output_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['filename', 'class_id'])
+
+            with torch.no_grad():
+                for i, (images, labels, image_file) in enumerate(limited_loader):
+                    if i >= n_samples:
+                        break
+                    images = images.to(device)
+                    outputs = model(images)
+                    _, predicted = torch.max(outputs.data, 1)
+                    writer.writerow([image_file[0], predicted.item()])
+
+    print(f"Predictions saved to {output_file}")
+
+    ground_truth_dir = './ground_truth/'
+    os.makedirs(ground_truth_dir, exist_ok=True)
+    ground_truth_file = os.path.join(ground_truth_dir, 'ground_truth.csv')
+
+    ground_truth_loader = DataLoader(testdataset, batch_size=1, shuffle=False)
+    with open(ground_truth_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['filename', 'class_id'])
+
+        for i, (images, labels, image_file) in enumerate(ground_truth_loader):
+            if n_samples > 0 and i >= n_samples:
+                break
+            writer.writerow([image_file[0], labels.item()])
+
+    print(f"Ground truth saved to {ground_truth_file}")
+
 
 
 # #### code below should not be changed ############################################################################

@@ -9,8 +9,13 @@ import matplotlib.pyplot as plt
 
 import torch
 from torchview import draw_graph
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, random_split
+from torchvision import utils as vutils
 from network import ModelExample
-from dataset import SampleDataset
+from dataset import SampleDataset, SampleDataSpliter
 
 
 # sample function for model architecture visualization
@@ -37,19 +42,37 @@ def fit(net, batch_size, epochs, trainloader, validloader, loss_fn, optimizer, d
     train_losses = []
     validation_losses = []
 
-    running_loss = 0.0
+    net.to(device)
+
     for epoch in range(epochs):
+        # Training phase
+        net.train()
+        running_loss = 0.0
+        for data, labels in trainloader:
+            data, labels = data.to(device), labels.to(device)
+            optimizer.zero_grad()
+            outputs = net(data)
+            loss = loss_fn(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
 
-        for batch_idx in range(0, 10):
-            # add current loss
-            running_loss += 0.1
+        avg_train_loss = running_loss / len(trainloader)
+        train_losses.append(avg_train_loss)
 
-            # graph variables
-            train_losses.append(running_loss)
-            validation_losses.append(running_loss - 0.1)
+        # Validation phase
+        net.eval()
+        running_loss = 0.0
+        with torch.no_grad():
+            for data, labels, img_file in validloader:
+                data, labels = data.to(device), labels.to(device)
+                outputs = net(data)
+                loss = loss_fn(outputs, labels)
+                running_loss += loss.item()
 
-        # print training info
-        print('Epoch {}, train loss: {:.5f}, val loss: {:.5f}'.format(epoch, running_loss / 42, running_loss / 42))
+        avg_val_loss = running_loss / len(validloader)
+        validation_losses.append(avg_val_loss)
+        print(f'Epoch {epoch + 1}, Train Loss: {avg_train_loss:.5f}, Val Loss: {avg_val_loss:.5f}')
 
     print('Training finished!')
     return train_losses, validation_losses
@@ -75,23 +98,34 @@ def training(dataset_path):
     print('Computing with {}!'.format(device))
 
     batch_size = 64
-    traindataset, valdataset = SampleDataset(), SampleDataset()
-    trainloader, valloader = None, None
+    epochs = 5  # Adjust epochs as needed
 
-    net = ModelExample()
-    input_sample = torch.zeros((1, 512, 1024))
+    # Load dataset
+    cityscape_dataset = SampleDataset(data_dir=dataset_path)
+    sample_data_splitter = SampleDataSpliter(cityscape_dataset)
+
+    traindataset = sample_data_splitter.get_train_dataset()
+    valdataset = sample_data_splitter.get_val_dataset()
+
+    trainloader = DataLoader(traindataset, batch_size=batch_size, shuffle=True)
+    valloader = DataLoader(valdataset, batch_size=batch_size, shuffle=False)
+
+    number_of_classes = 6
+
+    net = ModelExample(number_of_classes)
+    input_sample = torch.zeros((1, 3, 256, 256)).to(device)  # Update input sample dimensions as required
     draw_network_architecture(net, input_sample)
 
-    # define optimizer and learning rate
-    optimizer = None
+    # Define optimizer and learning rate
+    optimizer = optim.Adam(net.parameters(), lr=0.001)
 
-    # define loss function
-    loss_fn = None
+    # Define loss function
+    loss_fn = nn.CrossEntropyLoss()
 
-    # train the network for three epochs
-    tr_losses, val_losses = fit(net, batch_size, 3, trainloader, valloader, loss_fn, optimizer, device)
+    # Train the network
+    tr_losses, val_losses = fit(net, batch_size, epochs, trainloader, valloader, loss_fn, optimizer, device)
 
-    # save the trained model and plot the losses, feel free to create your own functions
+    # Save the trained model and plot the losses
     torch.save(net, 'model.pt')
     plot_learning_curves(tr_losses, val_losses)
     return

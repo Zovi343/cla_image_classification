@@ -1,0 +1,5 @@
+model.pt
+model_architecture
+model_architecture.png
+learning_curves.png
+__pycache__/*
