@@ -141,5 +141,6 @@ def get_arguments():
 
 
 if __name__ == "__main__":
-    path_2_dataset = "../public/data_cla_public"
+    path_2_dataset = get_arguments()
     training(path_2_dataset)
+
