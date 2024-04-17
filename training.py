@@ -1,4 +1,4 @@
-# STUDENT's UCO: 000000
+# STUDENT's UCO: 482857
 
 # Description:
 # This file should be used for performing training of a network
@@ -48,7 +48,7 @@ def fit(net, batch_size, epochs, trainloader, validloader, loss_fn, optimizer, d
         # Training phase
         net.train()
         running_loss = 0.0
-        for data, labels in trainloader:
+        for data, labels, _ in trainloader:
             data, labels = data.to(device), labels.to(device)
             optimizer.zero_grad()
             outputs = net(data)
@@ -98,9 +98,8 @@ def training(dataset_path):
     print('Computing with {}!'.format(device))
 
     batch_size = 64
-    epochs = 5  # Adjust epochs as needed
+    epochs = 5
 
-    # Load dataset
     cityscape_dataset = SampleDataset(data_dir=dataset_path)
     sample_data_splitter = SampleDataSpliter(cityscape_dataset)
 
@@ -113,19 +112,15 @@ def training(dataset_path):
     number_of_classes = 6
 
     net = ModelExample(number_of_classes)
-    input_sample = torch.zeros((1, 3, 256, 256)).to(device)  # Update input sample dimensions as required
+    input_sample = torch.zeros((1, 3, 256, 256)).to(device)
     draw_network_architecture(net, input_sample)
 
-    # Define optimizer and learning rate
     optimizer = optim.Adam(net.parameters(), lr=0.001)
 
-    # Define loss function
     loss_fn = nn.CrossEntropyLoss()
 
-    # Train the network
     tr_losses, val_losses = fit(net, batch_size, epochs, trainloader, valloader, loss_fn, optimizer, device)
 
-    # Save the trained model and plot the losses
     torch.save(net, 'model.pt')
     plot_learning_curves(tr_losses, val_losses)
     return
@@ -146,5 +141,5 @@ def get_arguments():
 
 
 if __name__ == "__main__":
-    path_2_dataset = get_arguments()
+    path_2_dataset = "../public/data_cla_public"
     training(path_2_dataset)

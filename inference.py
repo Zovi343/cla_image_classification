@@ -1,4 +1,4 @@
-# STUDENT's UCO: 000000
+# STUDENT's UCO: 482857
 
 # Description:
 # This file should be used for performing inference on a network
@@ -21,35 +21,29 @@ def infer_all(net, batch_size, dataloader, device, output_file):
     net.to(device)
     net.eval()
 
-    # Open a file to write the predictions
     with open(output_file, mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(['filename', 'class_id'])
 
-        # Do not calculate the gradients
         with torch.no_grad():
             for i, (images, labels, image_files) in enumerate(dataloader):
                 images = images.to(device)
                 outputs = net(images)
                 _, predicted = torch.max(outputs.data, 1)
-                # Write each prediction to the CSV file
                 for idx, (pred, actual) in enumerate(zip(predicted.cpu().numpy(), labels.numpy())):
                     writer.writerow([image_files[idx], pred])
 
 
 # declaration for this function should not be changed
 def inference(dataset_path, model_path, n_samples):
-    # Check for available GPU
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Computing with {}!'.format(device))
 
-    # Load the model
     model = torch.load(model_path)
     model.eval()
 
     batch_size = 4
 
-    # Initialize dataset and dataloader
     cityscape_dataset = SampleDataset(data_dir=dataset_path)
     sample_data_splitter = SampleDataSpliter(cityscape_dataset)
     testdataset = sample_data_splitter.get_test_dataset()
@@ -59,7 +53,6 @@ def inference(dataset_path, model_path, n_samples):
     os.makedirs(output_dir, exist_ok=True)
     output_file = os.path.join(output_dir, 'predictions.csv')
 
-    # Perform inference
     if n_samples <= 0:
         infer_all(model, batch_size, testloader, device, output_file)
     else:

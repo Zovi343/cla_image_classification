@@ -1,4 +1,4 @@
-# STUDENT's UCO: 000000
+# STUDENT's UCO: 482857
 
 # Description:
 # This file should contain custom dataset class. The class should subclass the torch.utils.data.Dataset.
@@ -20,12 +20,11 @@ def compute_mean_std(data_dir):
                 path = os.path.join(root, file)
                 imgs.append(path)
 
-    # Initialize lists to store all pixel values by channel
     pixels_per_channel = [[], [], []]
 
     for img_path in imgs:
         img = Image.open(img_path).convert('RGB')
-        pixels = np.array(img).reshape(-1, 3)  # Flatten the image and separate the channels
+        pixels = np.array(img).reshape(-1, 3)
         for i in range(3):
             pixels_per_channel[i].extend(pixels[:, i])
 
@@ -47,12 +46,11 @@ def compute_mean_std_gpu(data_dir):
             if file.endswith('.png'):
                 path = os.path.join(root, file)
                 img = Image.open(path).convert('RGB')
-                img_tensor = transform(img).unsqueeze(0).to('cuda') # Adds batch dimension and sends to GPU
+                img_tensor = transform(img).unsqueeze(0).to('cuda')
                 img_tensors.append(img_tensor)
 
-    # Concatenate all tensors along the batch dimension and compute mean and std
     all_images = torch.cat(img_tensors, dim=0)
-    mean = torch.mean(all_images, dim=[0, 2, 3]) # Mean across batch, height, and width, for each channel
+    mean = torch.mean(all_images, dim=[0, 2, 3])
     std = torch.std(all_images, dim=[0, 2, 3])
 
     return mean.cpu().numpy(), std.cpu().numpy()
@@ -66,7 +64,7 @@ class SampleDataSpliter():
         total_size = len(dataset)
         train_size = int(0.7 * total_size)
         val_size = int(0.2 * total_size)
-        test_size = total_size - train_size - val_size  # Ensures all data is used
+        test_size = total_size - train_size - val_size
 
         self.traindataset, self.valdataset, self.testdataset = random_split(dataset, [train_size, val_size, test_size])
 
@@ -90,7 +88,6 @@ class SampleDataset(Dataset):
         self.data_info = self._get_images_info()
 
         # start = time.time()
-        # # Compute mean and std for normalization
         # dataset_mean, dataset_std = compute_mean_std_gpu(self.data_dir)
         # end = time.time()
         # print("Mean and Std computation took seconds: ", end - start)
@@ -106,7 +103,6 @@ class SampleDataset(Dataset):
         self.transform = transforms.Compose([
             transforms.Resize((256, 256)),
             transforms.ToTensor(),
-            # Normalize with the mean and standard deviation of the dataset
             transforms.Normalize(mean=dataset_mean, std=dataset_std),
         ])
 

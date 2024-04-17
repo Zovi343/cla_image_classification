@@ -1,28 +1,46 @@
-# STUDENT's UCO: 000000
+# STUDENT's UCO: 482857
 
 # Description:
 # This file should contain network class. The class should subclass the torch.nn.Module class.
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
 
 class ModelExample(nn.Module):
-    def __init__(self, num_classes):
-        super(ModelExample, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=32, kernel_size=5, stride=1, padding=2)
-        self.pool = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
-        self.conv2 = nn.Conv2d(in_channels=32, out_channels=64, kernel_size=5, stride=1, padding=2)
-        self.fc1 = nn.Linear(64 * 64 * 64, 1024)  # Assuming the input image size is 256x256
-        self.fc2 = nn.Linear(1024, num_classes)
-        self.dropout = nn.Dropout(0.5)
+    def __init__(self, num_classes: int = 6, dropout: float = 0.5) -> None:
+        super().__init__()
+        # _log_api_usage_once(self) # This is for debugging only
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(192, 384, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+        )
+        self.avgpool = nn.AdaptiveAvgPool2d((6, 6))
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=dropout),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(p=dropout),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
 
-    def forward(self, x):
-        # Input shape (batch_size, 3, 256, 256)
-        x = self.pool(F.relu(self.conv1(x)))  # Output shape (batch_size, 32, 128, 128)
-        x = self.pool(F.relu(self.conv2(x)))  # Output shape (batch_size, 64, 64, 64)
-        x = x.view(-1, 64 * 64 * 64)  # Flatten the output for the dense layer
-        x = F.relu(self.fc1(x))
-        x = self.dropout(x)
-        x = self.fc2(x)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.features(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
         return x
