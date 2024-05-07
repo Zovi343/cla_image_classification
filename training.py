@@ -41,6 +41,8 @@ def plot_learning_curves(train_losses, validation_losses):
 def fit(net, batch_size, epochs, trainloader, validloader, loss_fn, optimizer, device):
     train_losses = []
     validation_losses = []
+    best_val_loss = float('inf')
+    best_model_state = None
 
     net.to(device)
 
@@ -72,10 +74,14 @@ def fit(net, batch_size, epochs, trainloader, validloader, loss_fn, optimizer, d
 
         avg_val_loss = running_loss / len(validloader)
         validation_losses.append(avg_val_loss)
+
+        if avg_val_loss < best_val_loss:
+            best_val_loss = avg_val_loss
+            best_model_state = net.state_dict()
         print(f'Epoch {epoch + 1}, Train Loss: {avg_train_loss:.5f}, Val Loss: {avg_val_loss:.5f}')
 
     print('Training finished!')
-    return train_losses, validation_losses
+    return train_losses, validation_losses, best_model_state
 
 
 # declaration for this function should not be changed
@@ -98,7 +104,7 @@ def training(dataset_path):
     print('Computing with {}!'.format(device))
 
     batch_size = 64
-    epochs = 5
+    epochs = 12
 
     cityscape_dataset = SampleDataset(data_dir=dataset_path)
     sample_data_splitter = SampleDataSpliter(cityscape_dataset)
@@ -110,8 +116,9 @@ def training(dataset_path):
     valloader = DataLoader(valdataset, batch_size=batch_size, shuffle=False)
 
     number_of_classes = 6
+    dropout = 0.1
 
-    net = ModelExample(number_of_classes)
+    net = ModelExample(number_of_classes, dropout)
     input_sample = torch.zeros((1, 3, 256, 256)).to(device)
     draw_network_architecture(net, input_sample)
 
@@ -119,9 +126,12 @@ def training(dataset_path):
 
     loss_fn = nn.CrossEntropyLoss()
 
-    tr_losses, val_losses = fit(net, batch_size, epochs, trainloader, valloader, loss_fn, optimizer, device)
+    tr_losses, val_losses, best_model_state = fit(net, batch_size, epochs, trainloader, valloader, loss_fn, optimizer,
+                                                  device)
 
-    torch.save(net, 'model.pt')
+    best_model = ModelExample(number_of_classes)
+    best_model.load_state_dict(best_model_state)
+    torch.save(best_model, './model.pt')
     plot_learning_curves(tr_losses, val_losses)
     return
 

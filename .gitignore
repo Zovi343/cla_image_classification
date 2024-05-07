@@ -1,5 +1,9 @@
+final_files/model.pt
+model_architecture
+learning_curves.png
 model.pt
 model_architecture
 model_architecture.png
-learning_curves.png
+final_files/model_architecture.png
+final_files/learning_curves.png
 __pycache__/*

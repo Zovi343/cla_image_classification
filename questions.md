@@ -3,3 +3,4 @@
 2. Is the use of ALEXNet sufficient for the CLA task? Do I need some more complicated architecture?
 3. Should I somehow incorporate early stopping based on validation loss? What is best practice for this in torch?
 4. Currently, I am splitting the dataset into three parts.
+5. How can archive may not be larger than few MBs when I have to submit a model?
