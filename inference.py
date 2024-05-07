@@ -89,7 +89,6 @@ def inference(dataset_path, model_path, n_samples):
     print(f"Ground truth saved to {ground_truth_file}")
 
 
-
 # #### code below should not be changed ############################################################################
 def get_arguments():
     if len(sys.argv) == 3:

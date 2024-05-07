@@ -93,7 +93,6 @@ class SampleDataset(Dataset):
         # print("Mean and Std computation took seconds: ", end - start)
 
         # Precomputed mean and std
-        # TODO: switch back to computation of mean and std when submitting
         dataset_mean = np.array([0.28696328, 0.21672314, 0.25493133])
         dataset_std = np.array([0.19082104, 0.16210034, 0.17731088])
 
