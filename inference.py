@@ -45,8 +45,13 @@ def inference(dataset_path, model_path, n_samples):
     batch_size = 4
 
     cityscape_dataset = SampleDataset(data_dir=dataset_path)
-    sample_data_splitter = SampleDataSpliter(cityscape_dataset)
-    testdataset = sample_data_splitter.get_test_dataset()
+    testdataset = cityscape_dataset
+    # if the dataset is public, we need to split it into train and test to evaluate the model correctly
+    # I have put this here to make sure when the inference is run on secret dataset it predicts whole dataset
+    if '/public/data_cla_public' in dataset_path and n_samples == -42:
+        sample_data_splitter = SampleDataSpliter(cityscape_dataset)
+        testdataset = sample_data_splitter.get_test_dataset()
+
     testloader = DataLoader(testdataset, batch_size=batch_size, shuffle=False)
 
     output_dir = './output_predictions/'
@@ -72,21 +77,23 @@ def inference(dataset_path, model_path, n_samples):
 
     print(f"Predictions saved to {output_file}")
 
-    ground_truth_dir = './ground_truth/'
-    os.makedirs(ground_truth_dir, exist_ok=True)
-    ground_truth_file = os.path.join(ground_truth_dir, 'ground_truth.csv')
+    # Ground truth only written when working with public dataset
+    if '/public/data_cla_public' in dataset_path and n_samples == -42:
+        ground_truth_dir = './ground_truth/'
+        os.makedirs(ground_truth_dir, exist_ok=True)
+        ground_truth_file = os.path.join(ground_truth_dir, 'ground_truth.csv')
 
-    ground_truth_loader = DataLoader(testdataset, batch_size=1, shuffle=False)
-    with open(ground_truth_file, mode='w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow(['filename', 'class_id'])
+        ground_truth_loader = DataLoader(testdataset, batch_size=1, shuffle=False)
+        with open(ground_truth_file, mode='w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(['filename', 'class_id'])
 
-        for i, (images, labels, image_file) in enumerate(ground_truth_loader):
-            if n_samples > 0 and i >= n_samples:
-                break
-            writer.writerow([image_file[0], labels.item()])
+            for i, (images, labels, image_file) in enumerate(ground_truth_loader):
+                if n_samples > 0 and i >= n_samples:
+                    break
+                writer.writerow([image_file[0], labels.item()])
 
-    print(f"Ground truth saved to {ground_truth_file}")
+        print(f"Ground truth saved to {ground_truth_file}")
 
 
 # #### code below should not be changed ############################################################################

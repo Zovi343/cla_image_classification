@@ -9,7 +9,7 @@ if __name__ == "__main__":
     if train_model:
         training(path_2_dataset)
 
-    path_2_model = 'model.pt'
+    path_2_model = './final_files/final_model.pt'
     n_samples_2_predict = -1
 
     inference(path_2_dataset, path_2_model, n_samples_2_predict)
